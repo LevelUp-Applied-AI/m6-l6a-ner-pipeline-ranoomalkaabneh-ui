@@ -247,8 +247,10 @@ if __name__ == "__main__":
 
     # Load and explore
     df = load_data()
+
     if df is not None:
         summary = explore_data(df)
+
         if summary is not None:
             print(f"Shape: {summary['shape']}")
             print(f"Languages: {summary['lang_counts']}")
@@ -258,60 +260,65 @@ if __name__ == "__main__":
         # Preprocess a sample to verify your function
         sample_row = df[df["language"] == "en"].iloc[0]
         sample_tokens = preprocess_text(sample_row["text"], nlp)
+
         if sample_tokens is not None:
             print(f"\nSample preprocessed tokens: {sample_tokens[:10]}")
 
         # spaCy NER across the English corpus
         spacy_entities = extract_spacy_entities(df, nlp)
+
         if spacy_entities is not None:
             print(f"\nspaCy entities: {len(spacy_entities)} total")
 
         # HF NER across the English corpus
         hf_entities = extract_hf_entities(df, hf_ner)
+
         if hf_entities is not None:
             print(f"HF entities: {len(hf_entities)} total")
 
         # Compare the two systems
-    if spacy_entities is not None and hf_entities is not None:
+        if spacy_entities is not None and hf_entities is not None:
+            comparison = compare_ner_outputs(spacy_entities, hf_entities)
 
-        comparison = compare_ner_outputs(spacy_entities, hf_entities)
-    if comparison is not None:
-        print(f"\nBoth systems agreed on {len(comparison['both'])} entities")
-        print(f"spaCy-only: {len(comparison['spacy_only'])}")
-        print(f"HF-only: {len(comparison['hf_only'])}")
+            if comparison is not None:
+                print(f"\nBoth systems agreed on {len(comparison['both'])} entities")
+                print(f"spaCy-only: {len(comparison['spacy_only'])}")
+                print(f"HF-only: {len(comparison['hf_only'])}")
 
-        print("\nEntity Count Summary")
-        print(comparison["count_table"].to_markdown())
+                print("\nEntity Count Summary")
+                print(comparison["count_table"].to_markdown())
 
-       # Evaluate against gold standard
-gold = pd.read_csv("data/gold_entities.csv")
+        # Evaluate against gold standard
+        gold = pd.read_csv("data/gold_entities.csv")
 
-if spacy_entities is not None:
-    spacy_metrics = evaluate_ner(spacy_entities, gold)
-    if spacy_metrics is not None:
-        print(f"\nspaCy evaluation: {spacy_metrics}")
+        if spacy_entities is not None:
+            spacy_metrics = evaluate_ner(spacy_entities, gold)
 
-if hf_entities is not None:
-    hf_metrics = evaluate_ner(hf_entities, gold)
-    if hf_metrics is not None:
-        print(f"HF evaluation: {hf_metrics}")
+            if spacy_metrics is not None:
+                print(f"\nspaCy evaluation: {spacy_metrics}")
 
-metrics_table = pd.DataFrame({
-    "Metric": ["Precision", "Recall", "F1"],
-    "spaCy": [
-        spacy_metrics["precision"],
-        spacy_metrics["recall"],
-        spacy_metrics["f1"],
-    ],
-    "Hugging Face": [
-        hf_metrics["precision"],
-        hf_metrics["recall"],
-        hf_metrics["f1"],
-    ],
-})
+        if hf_entities is not None:
+            hf_metrics = evaluate_ner(hf_entities, gold)
 
-metrics_table["spaCy"] = metrics_table["spaCy"].map(lambda x: f"{x:.4f}")
-metrics_table["Hugging Face"] = metrics_table["Hugging Face"].map(lambda x: f"{x:.4f}")
+            if hf_metrics is not None:
+                print(f"HF evaluation: {hf_metrics}")
 
-print("\nGold Standard Evaluation")
-print(metrics_table.to_markdown(index=False))
+        metrics_table = pd.DataFrame({
+            "Metric": ["Precision", "Recall", "F1"],
+            "spaCy": [
+                spacy_metrics["precision"],
+                spacy_metrics["recall"],
+                spacy_metrics["f1"],
+            ],
+            "Hugging Face": [
+                hf_metrics["precision"],
+                hf_metrics["recall"],
+                hf_metrics["f1"],
+            ],
+        })
+
+        metrics_table["spaCy"] = metrics_table["spaCy"].map(lambda x: f"{x:.4f}")
+        metrics_table["Hugging Face"] = metrics_table["Hugging Face"].map(lambda x: f"{x:.4f}")
+
+        print("\nGold Standard Evaluation")
+        print(metrics_table.to_markdown(index=False))
